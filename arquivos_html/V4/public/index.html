@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - SOS Sorocaba</title>
+    <link rel="stylesheet" href="../src/styles/forms.css">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const API_BASE = 'http://localhost:3001';
+
+        // Home Component
+        function Home() {
+            const [patients, setPatients] = useState([]);
+            const [stats, setStats] = useState({
+                total: 0,
+                active: 0,
+                homeless: 0
+            });
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                loadData();
+            }, []);
+
+            const loadData = async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                        window.location.href = '../login.html';
+                        return;
+                    }
+
+                    const response = await fetch(`${API_BASE}/patient`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 401) {
+                            localStorage.removeItem('token');
+                            window.location.href = '../login.html';
+                            return;
+                        }
+                        throw new Error('Erro ao carregar dados');
+                    }
+
+                    const data = await response.json();
+                    
+                    // Pegar os últimos 3 pacientes para a tabela
+                    setPatients(data.slice(-3));
+                    
+                    // Calcular estatísticas
+                    const total = data.length;
+                    const active = data.filter(p => p.status === 'Ativo').length;
+                    const homeless = data.filter(p => p.morador_rua).length;
+                    
+                    setStats({ total, active, homeless });
+                    setLoading(false);
+
+                } catch (error) {
+                    console.error('Erro:', error);
+                    setLoading(false);
+                }
+            };
+
+            if (loading) {
+                return (
+                    <Layout>
+                        <div style={{ textAlign: 'center', padding: '2rem' }}>
+                            <p>Carregando dados...</p>
+                        </div>
+                    </Layout>
+                );
+            }
+
+            return (
+                <Layout>
+                    <section className="hero-section">
+                        <h1>Painel de Controle</h1>
+                        <p className="hero-description">
+                            Sistema com pacientes cadastrados
+                        </p>
+                    </section>
+
+                    <div className="stats-cards">
+                        <div className="stat-card">
+                            <div className="stat-number">{stats.total}</div>
+                            <div className="stat-label">Total de Pacientes</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-number">{stats.active}</div>
+                            <div className="stat-label">Pacientes Ativos</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-number">{stats.homeless}</div>
+                            <div className="stat-label">Moradores de Rua</div>
+                        </div>
+                    </div>
+
+                    <section className="recent-patients">
+                        <h2>Pacientes Recentes</h2>
+                        <div className="table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Idade</th>
+                                        <th>Profissão</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {patients.length > 0 ? patients.map((patient) => (
+                                        <tr key={patient.id}>
+                                            <td><strong>{patient.nome}</strong></td>
+                                            <td>{patient.idade}</td>
+                                            <td>{patient.profissao}</td>
+                                            <td>
+                                                <span className={`status-badge ${patient.status?.toLowerCase() || 'unknown'}`}>
+                                                    {patient.status || 'Desconhecido'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan="4" style={{ textAlign: 'center' }}>
+                                                Nenhum paciente cadastrado
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </Layout>
+            );
+        }
+
+        // Layout
+        function Layout({ children }) {
+            return (
+                <>
+                    <div className="headerContent">
+                        <header>
+                            <h1>SOS Sorocaba</h1>
+                            <h4>Sistema de Gestão Social</h4>
+                            <nav>
+                                <a href="index.html" className="active">Dashboard</a>
+                                <a href="atividades.html">Atividades</a>
+                                <a href="forms.html">Cadastro</a>
+                                <a href="info.html">Usuários</a>
+                            </nav>
+                        </header>
+                    </div>
+                    <div className="mainContent">
+                        <main>{children}</main>
+                    </div>
+                    <div className="footerContent">
+                        <footer>
+                            <h3>SOS Sorocaba</h3>
+                            <h4>Plataforma de Assistência Social</h4>
+                        </footer>
+                    </div>
+                </>
+            );
+        }
+
+        function App() {
+            return <Home />;
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

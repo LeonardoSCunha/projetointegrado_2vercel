@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SOS Sorocaba</title>
+    <link rel="stylesheet" href="../src/styles/forms.css">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .chart-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useRef, useEffect, useState } = React;
+
+        const API_BASE = 'http://localhost:3001';
+
+        // Chart Component
+        function ChartComponent({ type, data, title }) {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            useEffect(() => {
+                if (chartRef.current && data) {
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+
+                    const ctx = chartRef.current.getContext('2d');
+                    chartInstance.current = new Chart(ctx, {
+                        type: type,
+                        data: data,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false
+                        }
+                    });
+                }
+
+                return () => {
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+                };
+            }, [type, data]);
+
+            return (
+                <div className="chart-card">
+                    <h3>{title}</h3>
+                    <div style={{ height: '250px', position: 'relative' }}>
+                        <canvas ref={chartRef}></canvas>
+                    </div>
+                </div>
+            );
+        }
+
+        // Dashboard Component
+        function Dashboard() {
+            const [patients, setPatients] = useState([]);
+            const [stats, setStats] = useState({
+                total: 0,
+                active: 0,
+                homeless: 0,
+                averageAge: 0
+            });
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                loadData();
+            }, []);
+
+            const loadData = async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                        window.location.href = '../login.html';
+                        return;
+                    }
+
+                    const response = await fetch(`${API_BASE}/patient`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 401) {
+                            localStorage.removeItem('token');
+                            window.location.href = '../login.html';
+                            return;
+                        }
+                        throw new Error('Erro ao carregar dados');
+                    }
+
+                    const data = await response.json();
+                    setPatients(data);
+                    
+                    // Calcular estatísticas
+                    const total = data.length;
+                    const active = data.filter(p => p.status === 'Ativo').length;
+                    const homeless = data.filter(p => p.morador_rua).length;
+                    const averageAge = total > 0 ? Math.round(data.reduce((sum, p) => sum + p.idade, 0) / total) : 0;
+                    
+                    setStats({ total, active, homeless, averageAge });
+                    setLoading(false);
+
+                } catch (error) {
+                    console.error('Erro:', error);
+                    setLoading(false);
+                }
+            };
+
+            const getGenderData = () => {
+                const masculine = patients.filter(p => p.sexo === 'Masculino').length;
+                const feminine = patients.filter(p => p.sexo === 'Feminino').length;
+                
+                return {
+                    labels: ['Masculino', 'Feminino'],
+                    datasets: [{
+                        data: [masculine, feminine],
+                        backgroundColor: ['#3B82F6', '#EC4899']
+                    }]
+                };
+            };
+
+            const getAgeData = () => {
+                const age18_30 = patients.filter(p => p.idade >= 18 && p.idade <= 30).length;
+                const age31_45 = patients.filter(p => p.idade >= 31 && p.idade <= 45).length;
+                const age46_60 = patients.filter(p => p.idade >= 46 && p.idade <= 60).length;
+                const age60plus = patients.filter(p => p.idade > 60).length;
+                
+                return {
+                    labels: ['18-30', '31-45', '46-60', '60+'],
+                    datasets: [{
+                        label: 'Pacientes',
+                        data: [age18_30, age31_45, age46_60, age60plus],
+                        backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
+                    }]
+                };
+            };
+
+            if (loading) {
+                return (
+                    <Layout>
+                        <div style={{ textAlign: 'center', padding: '2rem' }}>
+                            <p>Carregando dados...</p>
+                        </div>
+                    </Layout>
+                );
+            }
+
+            return (
+                <Layout>
+                    <section className="hero-section">
+                        <h1>📊 Dashboard Estatístico</h1>
+                        <p className="hero-description">
+                            Análise completa dos dados do SOS Sorocaba
+                        </p>
+                    </section>
+
+                    <div className="stats-cards">
+                        <div className="stat-card">
+                            <div className="stat-number">{stats.total}</div>
+                            <div className="stat-label">Total de Pacientes</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-number">{stats.active}</div>
+                            <div className="stat-label">Pacientes Ativos</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-number">{stats.homeless}</div>
+                            <div className="stat-label">Moradores de Rua</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-number">{stats.averageAge}</div>
+                            <div className="stat-label">Idade Média</div>
+                        </div>
+                    </div>
+
+                    <div className="charts-grid">
+                        <ChartComponent
+                            type="doughnut"
+                            data={getGenderData()}
+                            title="👥 Distribuição por Gênero"
+                        />
+                        <ChartComponent
+                            type="bar"
+                            data={getAgeData()}
+                            title="📊 Pacientes por Faixa Etária"
+                        />
+                    </div>
+                </Layout>
+            );
+        }
+
+        // Layout
+        function Layout({ children }) {
+            return (
+                <>
+                    <div className="headerContent">
+                        <header>
+                            <h1>SOS Sorocaba</h1>
+                            <h4>Sistema de Gestão Social</h4>
+                        </header>
+                    </div>
+                    <div className="mainContent">
+                        <main>{children}</main>
+                    </div>
+                    <div className="footerContent">
+                        <footer>
+                            <h3>SOS Sorocaba</h3>
+                            <h4>Plataforma de Assistência Social</h4>
+                        </footer>
+                    </div>
+                </>
+            );
+        }
+
+        function App() {
+            return <Dashboard />;
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

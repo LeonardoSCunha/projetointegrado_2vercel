@@ -1,0 +1,22 @@
+{
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/",
+      "destination": "/arquivos_html/V4/public/login.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/arquivos_html/V4/public/$1"
+    }
+  ],
+  "outputDirectory": "arquivos_html/V4/public"
+}

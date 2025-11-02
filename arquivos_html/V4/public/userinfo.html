@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil - SOS Sorocaba</title>
+    <link rel="stylesheet" href="../src/styles/forms.css">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const API_BASE = 'http://localhost:3001';
+
+        function Profile() {
+            const [patient, setPatient] = useState(null);
+            const [activities, setActivities] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [isEditing, setIsEditing] = useState(false);
+            const [editData, setEditData] = useState({});
+
+            useEffect(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const patientId = urlParams.get('id');
+                
+                if (patientId) {
+                    loadPatient(patientId);
+                } else {
+                    setLoading(false);
+                }
+            }, []);
+
+            const loadActivities = async (patientId) => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`${API_BASE}/history-activitie`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('Todas as atividades do histórico:', data);
+                        const patientActivities = data.filter(a => a.paciente.id == patientId);
+                        console.log(`Atividades do paciente ${patientId}:`, patientActivities);
+                        const mappedActivities = patientActivities.map(a => {
+                            console.log('Data original:', a.data_atendimento);
+                            console.log('Data formatada:', formatDate(a.data_atendimento));
+                            return {
+                                nome: a.atividade.descricao,
+                                data: a.data_atendimento
+                            };
+                        });
+                        setActivities(mappedActivities);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar atividades:', error);
+                }
+            };
+
+            const loadPatient = async (id) => {
+                try {
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                        window.location.href = '../login.html';
+                        return;
+                    }
+
+                    const response = await fetch(`${API_BASE}/patient`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Erro ao carregar pacientes');
+                    }
+
+                    const data = await response.json();
+                    const patient = data.find(p => p.id == id);
+                    
+                    if (patient) {
+                        setPatient(patient);
+                        await loadActivities(id);
+                    }
+                    setLoading(false);
+
+                } catch (error) {
+                    console.error('Erro:', error);
+                    setLoading(false);
+                }
+            };
+
+            const formatDate = (dateString) => {
+                if (!dateString) return '—';
+                try {
+                    console.log('Formatando data:', dateString);
+                    const date = new Date(dateString);
+                    console.log('Objeto Date:', date);
+                    const formatted = date.toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                    console.log('Data formatada:', formatted);
+                    return formatted;
+                } catch (error) {
+                    console.error('Erro ao formatar data:', error);
+                    return '—';
+                }
+            };
+
+            const renderList = (items, emptyMessage) => {
+                if (!items || items.length === 0) {
+                    return <li className="empty-item">{emptyMessage}</li>;
+                }
+
+                return items.map((item, index) => (
+                    <li key={index} className="list-item">
+                        <strong>{item.nome || item.description || item.name || 'Item'}</strong>
+                        {item.description && <div style={{ fontSize: '0.9em', color: '#666', marginTop: '4px' }}>{item.description}</div>}
+                        {item.data && (
+                            <span className="item-date"> - {formatDate(item.data)}</span>
+                        )}
+                    </li>
+                ));
+            };
+
+            if (loading) {
+                return (
+                    <Layout>
+                        <div style={{ textAlign: 'center', padding: '2rem' }}>
+                            <p>Carregando informações do paciente...</p>
+                        </div>
+                    </Layout>
+                );
+            }
+
+            if (!patient) {
+                return (
+                    <Layout>
+                        <div style={{ textAlign: 'center', padding: '2rem' }}>
+                            <p>Paciente não encontrado.</p>
+                            <a href="info.html">Voltar para lista de usuários</a>
+                        </div>
+                    </Layout>
+                );
+            }
+
+
+
+            const handleSave = async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`${API_BASE}/patient/${patient.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            ...patient,
+                            ...editData,
+                            idade: parseInt(editData.idade)
+                        })
+                    });
+
+                    if (response.ok) {
+                        setPatient({...patient, ...editData, idade: parseInt(editData.idade)});
+                        setIsEditing(false);
+                        alert('Dados atualizados com sucesso!');
+                    } else {
+                        alert('Erro ao atualizar dados');
+                    }
+                } catch (error) {
+                    alert('Erro de conexão');
+                }
+            };
+
+            const handleCancel = () => {
+                setIsEditing(false);
+                setEditData({});
+            };
+
+            // Mock data for benefits and dependencies
+            const benefits = [];
+            const dependencies = [];
+
+            return (
+                <Layout>
+                    <article>
+                        <header className="profile-header">
+                            <h1>Perfil: {patient.nome}</h1>
+                            <div className="profile-actions">
+                                <button className="btn-primary" onClick={() => {
+                                    setIsEditing(true);
+                                    setEditData({
+                                        nome: patient.nome,
+                                        idade: patient.idade,
+                                        profissao: patient.profissao || '',
+                                        estado_civil: patient.estado_civil || ''
+                                    });
+                                }}>
+                                    ✏️ Editar
+                                </button>
+                                <button onClick={() => window.print()} className="btn-secondary">
+                                    🖨️ Imprimir
+                                </button>
+                            </div>
+                        </header>
+
+                        <section className="patient-info">
+                            <h2>Informações Pessoais</h2>
+                            {isEditing ? (
+                                <div style={{ padding: '1rem', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                                    <div className="form-grid">
+                                        <div className="form-col">
+                                            <label>Nome:</label>
+                                            <input 
+                                                type="text" 
+                                                value={editData.nome || ''}
+                                                onChange={(e) => setEditData({...editData, nome: e.target.value})}
+                                            />
+                                            
+                                            <label>Idade:</label>
+                                            <input 
+                                                type="number" 
+                                                value={editData.idade || ''}
+                                                onChange={(e) => setEditData({...editData, idade: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="form-col">
+                                            <label>Profissão:</label>
+                                            <input 
+                                                type="text" 
+                                                value={editData.profissao || ''}
+                                                onChange={(e) => setEditData({...editData, profissao: e.target.value})}
+                                            />
+                                            
+                                            <label>Estado Civil:</label>
+                                            <select 
+                                                value={editData.estado_civil || ''}
+                                                onChange={(e) => setEditData({...editData, estado_civil: e.target.value})}
+                                            >
+                                                <option value="">Selecione</option>
+                                                <option value="Solteiro">Solteiro</option>
+                                                <option value="Casado">Casado</option>
+                                                <option value="Divorciado">Divorciado</option>
+                                                <option value="Viúvo">Viúvo</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                                        <button className="btn-primary" onClick={handleSave}>
+                                            ✓ Salvar
+                                        </button>
+                                        <button className="btn-secondary" onClick={handleCancel}>
+                                            ✕ Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="info-grid">
+                                    <div className="info-card">
+                                        <label>ID:</label>
+                                        <span>{patient.id}</span>
+                                    </div>
+                                    <div className="info-card">
+                                        <label>Nome:</label>
+                                        <span>{patient.nome}</span>
+                                    </div>
+                                    <div className="info-card">
+                                        <label>Idade:</label>
+                                        <span>{patient.idade} anos</span>
+                                    </div>
+                                    <div className="info-card">
+                                        <label>Documento:</label>
+                                        <span>{patient.documento}</span>
+                                    </div>
+                                    <div className="info-card">
+                                        <label>Sexo:</label>
+                                        <span>{patient.sexo}</span>
+                                    </div>
+                                    <div className="info-card">
+                                        <label>Data de Nascimento:</label>
+                                        <span>{formatDate(patient.data_nascimento)}</span>
+                                    </div>
+                                    <div className="info-card">
+                                        <label>Profissão:</label>
+                                        <span>{patient.profissao || '—'}</span>
+                                    </div>
+                                    <div className="info-card">
+                                        <label>Status:</label>
+                                        <span className={`status-badge ${patient.status?.toLowerCase()}`}>
+                                            {patient.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                        </section>
+
+                        <div className="details-grid">
+                            <section className="detail-section">
+                                <h2>🎁 Benefícios</h2>
+                                <ul className="detail-list">
+                                    {renderList(benefits, 'Nenhum benefício cadastrado')}
+                                </ul>
+                            </section>
+
+                            <section className="detail-section">
+                                <h2>⚠️ Dependências</h2>
+                                <ul className="detail-list">
+                                    {renderList(dependencies, 'Nenhuma dependência cadastrada')}
+                                </ul>
+                            </section>
+
+                            <section className="detail-section full-width">
+                                <h2>🏃 Atividades Realizadas</h2>
+                                <ul className="detail-list">
+                                    {renderList(activities, 'Nenhuma atividade registrada')}
+                                </ul>
+                            </section>
+                        </div>
+                    </article>
+                </Layout>
+            );
+        }
+
+        // Layout
+        function Layout({ children }) {
+            return (
+                <>
+                    <div className="headerContent">
+                        <header>
+                            <h1>SOS Sorocaba</h1>
+                            <h4>Sistema de Gestão Social</h4>
+                            <nav>
+                                <a href="index.html">Dashboard</a>
+                                <a href="atividades.html">Atividades</a>
+                                <a href="forms.html">Cadastro</a>
+                                <a href="info.html">Usuários</a>
+                            </nav>
+                        </header>
+                    </div>
+                    <div className="mainContent">
+                        <main>{children}</main>
+                    </div>
+                    <div className="footerContent">
+                        <footer>
+                            <h3>SOS Sorocaba</h3>
+                            <h4>Plataforma de Assistência Social</h4>
+                        </footer>
+                    </div>
+                </>
+            );
+        }
+
+        function App() {
+            return <Profile />;
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

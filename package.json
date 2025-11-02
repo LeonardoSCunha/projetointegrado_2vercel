@@ -8,7 +8,8 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "start": "node --tls-min-v1.0 dist/shared/infra/http/server.js",
-    "build": "babel src --extensions \".js,.ts\" --out-dir dist --copy-files"
+    "build": "babel src --extensions \".js,.ts\" --out-dir dist --copy-files && babel api --extensions \".js,.ts\" --out-dir api --copy-files",
+    "vercel-build": "npm run build"
   },
   "keywords": [
     "UNIVESP",
