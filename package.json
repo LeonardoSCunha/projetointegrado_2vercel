@@ -9,7 +9,8 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "start": "node --tls-min-v1.0 dist/shared/infra/http/server.js",
     "build": "babel src --extensions \".js,.ts\" --out-dir dist --copy-files && babel api --extensions \".js,.ts\" --out-dir api --copy-files",
-    "vercel-build": "npm run build"
+    "build:frontend": "cd frontend && npm install && npm run build",
+    "vercel-build": "npm run build:frontend"
   },
   "keywords": [
     "UNIVESP",

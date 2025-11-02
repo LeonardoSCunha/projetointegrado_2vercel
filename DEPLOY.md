@@ -3,10 +3,10 @@
 ## Configuração no Vercel
 
 ### 1. Configurações do Projeto
-- **Framework Preset:** Other
+- **Framework Preset:** Create React App
 - **Root Directory:** (deixe vazio)
-- **Build Command:** `npm run build`
-- **Output Directory:** `arquivos_html/V4/public`
+- **Build Command:** `npm run build:frontend`
+- **Output Directory:** `frontend/build`
 - **Install Command:** `npm install`
 
 ### 2. Variáveis de Ambiente
@@ -31,13 +31,14 @@ As seguintes rotas estarão disponíveis:
 - `GET /api/history-activitie` - Listar histórico de atividades
 - `POST /api/history-activitie` - Registrar nova atividade
 
-### 4. Frontend
-O frontend estará disponível na raiz do domínio:
-- `/` - Página de login
-- `/index.html` - Dashboard principal
-- `/forms.html` - Formulário de cadastro
-- `/atividades.html` - Registro de atividades
-- `/userinfo.html` - Informações do usuário
+### 4. Frontend (React)
+O frontend React estará disponível na raiz do domínio:
+- `/` - Dashboard principal
+- `/login` - Página de login
+- `/patients` - Lista de pacientes
+- `/register` - Formulário de cadastro
+- `/activities` - Registro de atividades
+- `/patient/:id` - Perfil do paciente
 
 ### 5. Banco de Dados
 Certifique-se de que o banco MySQL esteja acessível publicamente ou use um serviço como:

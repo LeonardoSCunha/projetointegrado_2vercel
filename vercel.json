@@ -10,13 +10,10 @@
       "destination": "/api/$1"
     },
     {
-      "source": "/",
-      "destination": "/arquivos_html/V4/public/login.html"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/arquivos_html/V4/public/$1"
+      "destination": "/index.html"
     }
   ],
-  "outputDirectory": "arquivos_html/V4/public"
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/build"
 }
